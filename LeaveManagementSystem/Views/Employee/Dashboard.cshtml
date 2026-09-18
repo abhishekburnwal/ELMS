@@ -1,0 +1,62 @@
+@model LeaveManagementSystem.ViewModels.EmployeeDashboardViewModel
+@{
+    ViewData["Title"] = "My Dashboard";
+}
+
+<div class="topbar">
+    <h1>My Dashboard</h1>
+    <span class="who">Signed in as @User.Identity?.Name</span>
+</div>
+
+<div class="balance-row">
+    <div class="balance-card">
+        <div style="font-size:12.5px; opacity:.75;">Days remaining</div>
+        <div class="statval" style="font-size:34px;">@Model.RemainingDays</div>
+        <div style="font-size:12.5px; opacity:.75;">of @Model.LeaveBalance annual &middot; @Model.UsedDays used</div>
+    </div>
+    <div class="stat-row" style="margin-bottom:0; grid-template-columns:repeat(3,1fr);">
+        <div class="stat pending">
+            <div class="lbl">Pending</div>
+            <div class="statval">@Model.PendingCount</div>
+        </div>
+        <div class="stat approved">
+            <div class="lbl">Approved</div>
+            <div class="statval">@Model.ApprovedCount</div>
+        </div>
+        <div class="stat rejected">
+            <div class="lbl">Rejected</div>
+            <div class="statval">@Model.RejectedCount</div>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <h3>Recent requests</h3>
+    <table class="elms">
+        <thead>
+            <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>Days</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.RecentRequests.Count == 0)
+        {
+            <tr><td colspan="4" style="color:var(--ink-soft);">No leave requests yet. <a asp-action="Apply">Apply for leave</a>.</td></tr>
+        }
+        @foreach (var r in Model.RecentRequests)
+        {
+            var days = LeaveDaysCalculator.CountWorkingDays(r.FromDate, r.ToDate);
+            var status = r.Status.ToString().ToLower();
+            <tr>
+                <td>@r.FromDate.ToString("yyyy-MM-dd")</td>
+                <td>@r.ToDate.ToString("yyyy-MM-dd")</td>
+                <td>@days</td>
+                <td><span class="badge @status">@r.Status</span></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

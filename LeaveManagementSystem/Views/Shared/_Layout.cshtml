@@ -1,0 +1,90 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ELMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+@{
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var isAdmin = User.IsInRole("Admin");
+    var controller = (ViewContext.RouteData.Values["controller"] as string) ?? string.Empty;
+    var action = (ViewContext.RouteData.Values["action"] as string) ?? string.Empty;
+    string NavClass(string c, string a) =>
+        string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(action, a, StringComparison.OrdinalIgnoreCase) ? "navitem on" : "navitem";
+}
+@if (!isAuthenticated)
+{
+    @RenderBody()
+}
+else
+{
+    <div class="app">
+        <aside class="rail">
+            <div class="brand">ELMS</div>
+            @if (isAdmin)
+            {
+                <a class="@NavClass("Admin", "Index")" asp-controller="Admin" asp-action="Index">Dashboard</a>
+                <a class="@NavClass("Admin", "Employees")" asp-controller="Admin" asp-action="Employees">Employees</a>
+                <a class="@NavClass("Admin", "LeaveRequests")" asp-controller="Admin" asp-action="LeaveRequests">Leave Requests</a>
+            }
+            else
+            {
+                <a class="@NavClass("Employee", "Dashboard")" asp-controller="Employee" asp-action="Dashboard">Dashboard</a>
+                <a class="@NavClass("Employee", "Apply")" asp-controller="Employee" asp-action="Apply">Apply Leave</a>
+                <a class="@NavClass("Employee", "History")" asp-controller="Employee" asp-action="History">History</a>
+            }
+            <form asp-controller="Account" asp-action="Logout" method="post" class="logout">
+                @Html.AntiForgeryToken()
+                <button type="submit">Sign out (@User.Identity?.Name)</button>
+            </form>
+        </aside>
+        <div class="main">
+            <div id="leaveToast" class="elms-toast"></div>
+            @RenderBody()
+        </div>
+    </div>
+}
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/lib/signalr/signalr.min.js" asp-append-version="true"></script>
+<script>
+    // Single reusable SignalR connection for all authenticated pages:
+    // employees hear LeaveStatusChanged, admins hear LeaveSubmitted.
+    // Served locally (no CDN dependency); page works fine if it fails.
+    (function () {
+        if (!window.signalR) return;
+        var toast = document.getElementById('leaveToast');
+        if (!toast || window.__elmsSignalR) return;
+        function show(html) {
+            toast.innerHTML = html;
+            toast.classList.add('show');
+        }
+        var connection = new signalR.HubConnectionBuilder()
+            .withUrl('/hub/notifications')
+            .withAutomaticReconnect()
+            .build();
+        connection.on('LeaveStatusChanged', function (msg) {
+            show('Your leave request #' + msg.requestId +
+                ' was <strong>' + msg.status + '</strong>. ' +
+                '<a href="/Employee/History">View history</a>');
+        });
+        connection.on('LeaveSubmitted', function (msg) {
+            show('New leave request #' + msg.requestId + ' submitted. ' +
+                '<a href="/Admin/LeaveRequests?status=Pending">Review requests</a>');
+        });
+        window.__elmsSignalR = connection;
+        connection.start().catch(function () { /* offline — page still works */ });
+    })();
+</script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

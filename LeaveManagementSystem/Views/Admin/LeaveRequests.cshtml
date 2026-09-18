@@ -1,0 +1,123 @@
+@model List<LeaveManagementSystem.Models.Entities.LeaveRequest>
+@{
+    ViewData["Title"] = "Leave Requests";
+    var filter = (string?)ViewData["StatusFilter"];
+    var from = (string?)ViewData["From"];
+    var to = (string?)ViewData["To"];
+    var search = (string?)ViewData["Search"];
+}
+
+<div class="topbar">
+    <h1>Leave Requests</h1>
+    <span class="who">Signed in as @User.Identity?.Name (Admin)</span>
+</div>
+
+@if (TempData["Message"] is string message)
+{
+    <div class="demo-note" style="margin-bottom:24px;">@message</div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="validation-summary" style="margin-bottom:24px;">@error</div>
+}
+
+<div class="panel">
+    <h3>All requests</h3>
+    <div class="body" style="border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:end; justify-content:space-between; flex-wrap:wrap;">
+        <form asp-action="LeaveRequests" method="get" style="display:flex; gap:8px; align-items:end; flex-wrap:wrap;">
+            <span>
+                <label style="display:block; font-size:12px; color:var(--ink-soft);">Status</label>
+                <select name="status" style="padding:9px 12px; border:1px solid var(--line); border-radius:var(--radius); font-size:14px; font-family:inherit;">
+                    <option value="">All statuses</option>
+                    @foreach (var s in new[] { "Pending", "Approved", "Rejected" })
+                    {
+                        if (filter == s)
+                        {
+                            <option value="@s" selected>@s</option>
+                        }
+                        else
+                        {
+                            <option value="@s">@s</option>
+                        }
+                    }
+                </select>
+            </span>
+            <span>
+                <label style="display:block; font-size:12px; color:var(--ink-soft);">From</label>
+                <input type="date" name="from" value="@from" style="padding:8px 12px; border:1px solid var(--line); border-radius:var(--radius); font-size:14px; font-family:inherit;" />
+            </span>
+            <span>
+                <label style="display:block; font-size:12px; color:var(--ink-soft);">To</label>
+                <input type="date" name="to" value="@to" style="padding:8px 12px; border:1px solid var(--line); border-radius:var(--radius); font-size:14px; font-family:inherit;" />
+            </span>
+            <span>
+                <label style="display:block; font-size:12px; color:var(--ink-soft);">Employee / reason</label>
+                <input type="text" name="search" value="@search" placeholder="Name, email, reason"
+                       style="padding:9px 12px; border:1px solid var(--line); border-radius:var(--radius); font-size:14px; font-family:inherit;" />
+            </span>
+            <button type="submit" class="btn-elms btn-elms-auto">Filter</button>
+        </form>
+        <a asp-action="ExportLeaveRequests" asp-route-status="@filter" asp-route-from="@from" asp-route-to="@to" asp-route-search="@search"
+           class="btn-elms btn-elms-auto" style="text-decoration:none; display:inline-block; text-align:center;">Export to Excel</a>
+    </div>
+    <table class="elms">
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Days</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Review note</th>
+                <th>Reviewed by</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Count == 0)
+        {
+            <tr><td colspan="8" style="color:var(--ink-soft);">No leave requests found.</td></tr>
+        }
+        @foreach (var r in Model)
+        {
+            var days = LeaveDaysCalculator.CountWorkingDays(r.FromDate, r.ToDate);
+            var status = r.Status.ToString().ToLower();
+            <tr>
+                <td>@r.User?.FullName<br /><span style="color:var(--ink-soft); font-size:12px;">@r.User?.Email</span></td>
+                <td>@r.FromDate.ToString("yyyy-MM-dd")</td>
+                <td>@r.ToDate.ToString("yyyy-MM-dd")</td>
+                <td>@days</td>
+                <td>@r.Reason</td>
+                <td><span class="badge @status">@r.Status</span></td>
+                <td>
+                    @if (r.Status.ToString() == "Pending")
+                    {
+                        <form asp-action="Approve" asp-route-id="@r.Id" method="post" style="display:flex; gap:6px;">
+                            <input type="text" name="remarks" placeholder="Optional note" maxlength="500"
+                                   style="width:130px; padding:5px 8px; border:1px solid var(--line); border-radius:4px; font-size:12.5px; font-family:inherit;" />
+                            <span class="row-actions">
+                                <button type="submit" class="approve">Approve</button>
+                                <button type="submit" formaction="@Url.Action("Reject", new { id = r.Id })" class="reject">Reject</button>
+                            </span>
+                        </form>
+                    }
+                    else
+                    {
+                        <span style="color:var(--ink-soft); font-size:12.5px;">@(r.Remarks ?? "—")</span>
+                    }
+                </td>
+                <td>
+                    @if (r.Status.ToString() == "Pending")
+                    {
+                        <span style="color:var(--ink-soft);">—</span>
+                    }
+                    else
+                    {
+                        <span style="font-size:12.5px;">@r.ReviewedBy?.FullName<br /><span style="color:var(--ink-soft);">@r.ReviewedDate?.ToString("yyyy-MM-dd HH:mm")</span></span>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

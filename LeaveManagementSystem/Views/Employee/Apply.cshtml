@@ -1,0 +1,62 @@
+@model LeaveManagementSystem.ViewModels.ApplyLeaveViewModel
+@{
+    ViewData["Title"] = "Apply for Leave";
+}
+
+<div class="topbar">
+    <h1>Apply for Leave</h1>
+    <span class="who">Signed in as @User.Identity?.Name</span>
+</div>
+
+<div class="panel">
+    <h3>New leave request</h3>
+    <div class="body">
+        <form asp-action="Apply" method="post" style="max-width:480px;">
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+            <div class="field">
+                <label asp-for="FromDate"></label>
+                <input asp-for="FromDate" type="date" id="fromDate"
+                       min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                <span asp-validation-for="FromDate" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="ToDate"></label>
+                <input asp-for="ToDate" type="date" id="toDate" />
+                <span asp-validation-for="ToDate" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Reason"></label>
+                <textarea asp-for="Reason" rows="4"></textarea>
+                <span asp-validation-for="Reason" class="field-validation-error"></span>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button type="submit" class="btn-elms btn-elms-auto">Submit request</button>
+                <a asp-action="History" class="btn-elms btn-elms-auto" style="text-decoration:none; background:var(--ink-soft); display:inline-block; text-align:center;">My history</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // To Date dynamically follows From Date: nothing before it is
+        // selectable, and an invalidated To Date is cleared. Same-day is
+        // allowed (min = From, not From + 1). Backend re-validates everything.
+        (function () {
+            var from = document.getElementById('fromDate');
+            var to = document.getElementById('toDate');
+            if (!from || !to) return;
+            function syncToDate() {
+                to.min = from.value;
+                if (to.value && from.value && to.value < from.value) {
+                    to.value = '';
+                }
+            }
+            from.addEventListener('change', syncToDate);
+            syncToDate();
+        })();
+    </script>
+}

@@ -1,0 +1,54 @@
+@model LeaveManagementSystem.ViewModels.EmployeeFormViewModel
+@{
+    var isEdit = Model.Id.HasValue;
+    ViewData["Title"] = isEdit ? "Edit Employee" : "Add Employee";
+}
+
+<div class="topbar">
+    <h1>@(isEdit ? "Edit Employee" : "Add Employee")</h1>
+    <span class="who">Signed in as @User.Identity?.Name (Admin)</span>
+</div>
+
+<div class="panel">
+    <h3>@(isEdit ? "Update the employee record" : "Create a new employee record")</h3>
+    <div class="body">
+        <form asp-action="@(isEdit ? "EditEmployee" : "CreateEmployee")" method="post" style="max-width:480px;">
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+            @if (isEdit)
+            {
+                <input type="hidden" asp-for="Id" />
+            }
+
+            <div class="field">
+                <label asp-for="FullName"></label>
+                <input asp-for="FullName" type="text" autocomplete="off" />
+                <span asp-validation-for="FullName" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" type="email" autocomplete="off" />
+                <span asp-validation-for="Email" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Password"></label>
+                <input asp-for="Password" type="password" autocomplete="new-password"
+                       placeholder="@(isEdit ? "Leave blank to keep the current password" : "Required for a new employee")" />
+                <span asp-validation-for="Password" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="LeaveBalance"></label>
+                <input asp-for="LeaveBalance" type="number" min="0" max="60" />
+                <span asp-validation-for="LeaveBalance" class="field-validation-error"></span>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button type="submit" class="btn-elms btn-elms-auto">@(isEdit ? "Save changes" : "Create employee")</button>
+                <a asp-action="Employees" class="btn-elms btn-elms-auto" style="text-decoration:none; background:var(--ink-soft); display:inline-block; text-align:center;">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

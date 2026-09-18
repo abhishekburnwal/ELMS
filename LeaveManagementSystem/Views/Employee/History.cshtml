@@ -1,0 +1,49 @@
+@model List<LeaveManagementSystem.Models.Entities.LeaveRequest>
+@{
+    ViewData["Title"] = "My Leave History";
+}
+
+<div class="topbar">
+    <h1>My Leave History</h1>
+    <span class="who">Signed in as @User.Identity?.Name</span>
+</div>
+
+@if (TempData["Message"] is string message)
+{
+    <div class="demo-note" style="margin-bottom:24px;">@message</div>
+}
+
+<div class="panel">
+    <h3>My requests</h3>
+    <table class="elms">
+        <thead>
+            <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>Days</th>
+                <th>Reason</th>
+                <th>Applied</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Count == 0)
+        {
+            <tr><td colspan="6" style="color:var(--ink-soft);">No leave requests yet. <a asp-action="Apply">Apply for leave</a>.</td></tr>
+        }
+        @foreach (var r in Model)
+        {
+            var days = LeaveDaysCalculator.CountWorkingDays(r.FromDate, r.ToDate);
+            var status = r.Status.ToString().ToLower();
+            <tr>
+                <td>@r.FromDate.ToString("yyyy-MM-dd")</td>
+                <td>@r.ToDate.ToString("yyyy-MM-dd")</td>
+                <td>@days</td>
+                <td>@r.Reason</td>
+                <td>@r.AppliedDate.ToString("yyyy-MM-dd")</td>
+                <td><span class="badge @status">@r.Status</span></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,36 @@
+@model LeaveManagementSystem.ViewModels.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="topbar">
+    <h1>Admin Dashboard</h1>
+    <span class="who">Signed in as @User.Identity?.Name (Admin)</span>
+</div>
+
+<div class="stat-row">
+    <div class="stat">
+        <div class="lbl">Total Employees</div>
+        <div class="statval">@Model.TotalEmployees</div>
+    </div>
+    <div class="stat pending">
+        <div class="lbl">Pending Requests</div>
+        <div class="statval">@Model.PendingCount</div>
+    </div>
+    <div class="stat approved">
+        <div class="lbl">Approved Requests</div>
+        <div class="statval">@Model.ApprovedCount</div>
+    </div>
+    <div class="stat rejected">
+        <div class="lbl">Rejected Requests</div>
+        <div class="statval">@Model.RejectedCount</div>
+    </div>
+</div>
+
+<div class="panel">
+    <h3>Manage</h3>
+    <div class="body" style="display:flex; gap:10px;">
+        <a asp-action="Employees" class="btn-elms btn-elms-auto" style="text-decoration:none; display:inline-block; text-align:center;">Employees</a>
+        <a asp-action="LeaveRequests" class="btn-elms btn-elms-auto" style="text-decoration:none; display:inline-block; text-align:center;">Leave Requests</a>
+    </div>
+</div>

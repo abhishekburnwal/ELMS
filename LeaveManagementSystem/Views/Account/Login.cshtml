@@ -1,0 +1,49 @@
+@model LeaveManagementSystem.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Sign in";
+    Layout = "_Layout";
+}
+
+<div class="login-wrap">
+    <div class="login-brand">
+        <div class="brand">ELMS</div>
+        <h1>Employee Leave Management System</h1>
+        <p>Apply for leave, review requests, and track balances — one place for employees and admins.</p>
+    </div>
+    <div class="login-form-side">
+        <form class="login-form" asp-action="Login" method="post">
+            <h2>Sign in</h2>
+            <p class="sub">Use your work email and password to continue.</p>
+
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+            <div class="field">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" type="email" autocomplete="username" />
+                <span asp-validation-for="Email" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Password"></label>
+                <input asp-for="Password" type="password" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label>
+                    <input asp-for="RememberMe" type="checkbox" style="width:auto" /> Remember me
+                </label>
+            </div>
+            <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
+            <button type="submit" class="btn-elms">Sign in</button>
+
+            <div class="demo-note">
+                Demo accounts — Admin: <strong>admin@example.com / admin123</strong><br />
+                Employee: <strong>employee@example.com / emp123</strong>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

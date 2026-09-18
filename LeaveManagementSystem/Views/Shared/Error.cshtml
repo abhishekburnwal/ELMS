@@ -1,0 +1,19 @@
+﻿@model ErrorViewModel
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+
+<div class="login-wrap">
+    <div class="login-brand">
+        <div class="brand">ELMS</div>
+        <h1>Something went wrong.</h1>
+        <p>We're sorry — your request couldn't be completed. Nothing you entered was lost; please try again.</p>
+    </div>
+    <div class="login-form-side">
+        <div class="login-form">
+            <h2>Unexpected error</h2>
+            <p class="sub">If this keeps happening, contact your administrator@if (Model.ShowRequestId){<span> and mention this reference: <code>@Model.RequestId</code></span>}.</p>
+            <a class="btn-elms btn-elms-auto" style="text-decoration:none; display:inline-block; text-align:center;" href="/">Back to start</a>
+        </div>
+    </div>
+</div>
