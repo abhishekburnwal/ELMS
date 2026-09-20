@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-09-20 — Global exception handling + logging (ELMS-21)
+
+- **New middleware** — `Middleware/GlobalExceptionMiddleware` catches every
+  unhandled request exception centrally (no per-controller try/catch). It logs
+  timestamp, HTTP method, path+query, user id/username (from the auth cookie
+  claims; null when anonymous), exception type, message, stack trace, and
+  correlation id — to the existing `ILogger` pipeline (structured `LogError`,
+  Info/Warning logging untouched) and to a new `ExceptionLogs` table in the
+  existing SQL Server Express database (`Services/ExceptionLogStore`).
+- **Response unchanged** — the middleware rethrows, so the existing
+  `UseExceptionHandler("/Home/Error")` flow still renders the generic 500 page
+  with no sensitive details. Correlation id uses the same expression as the
+  error page's reference (`Activity.Current?.Id ?? TraceIdentifier`), so a
+  quoted reference matches the DB row. If DB persistence itself fails, it falls
+  back to ILogger-only (logging never breaks the error path).
+
+Changed files:
+- `LeaveManagementSystem/Middleware/GlobalExceptionMiddleware.cs` (new)
+- `LeaveManagementSystem/Models/Entities/ExceptionLog.cs` (new)
+- `LeaveManagementSystem/Services/Interfaces/IExceptionLogStore.cs` (new)
+- `LeaveManagementSystem/Services/ExceptionLogStore.cs` (new)
+- `LeaveManagementSystem/Data/ApplicationDbContext.cs` (DbSet + config)
+- `LeaveManagementSystem/Data/Migrations/20260920073825_AddExceptionLogs.cs` (new)
+- `LeaveManagementSystem/Program.cs` (registration + `UseMiddleware`, inside `UseExceptionHandler`)
+- `LeaveManagementSystem.Tests/ExceptionMiddlewareTests.cs` (new, 4 tests)
+
+Verified: build clean (0 warn/0 err); 22/22 tests pass (18 existing + 4 new);
+migration applied to `.\SQLEXPRESS/LeaveManagementDb`; live intentional
+exception (`InvalidOperationException` from a temporary probe endpoint, since
+removed) returned the generic error page with zero detail leaked and wrote the
+full row to `ExceptionLogs` (all fields + 2.4KB stack trace confirmed, probe
+row deleted afterward); both seed logins re-verified after the migration's
+hash re-salt; `ExceptionLogs` left at 0 rows.
+
 ## 2026-09-20 — Role-based FAQ / Help (ELMS-20)
 
 - **New pages** — `FAQ / Help` in both the Employee and Admin menus

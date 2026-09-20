@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LeaveManagementSystem.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a5446312701040435aa35ce424103db1e050f950")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5489148fefa7d9c072e4a9c641d5d84a7e4f3262")]
 [assembly: System.Reflection.AssemblyProductAttribute("LeaveManagementSystem.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LeaveManagementSystem.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

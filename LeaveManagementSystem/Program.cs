@@ -1,5 +1,6 @@
 using LeaveManagementSystem.Data;
 using LeaveManagementSystem.Hubs;
+using LeaveManagementSystem.Middleware;
 using LeaveManagementSystem.Repositories;
 using LeaveManagementSystem.Repositories.Interfaces;
 using LeaveManagementSystem.Services;
@@ -33,6 +34,7 @@ builder.Services.AddScoped<ILeaveRepository, LeaveRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<ILeaveService, LeaveService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IExceptionLogStore, ExceptionLogStore>();
 
 var app = builder.Build();
 
@@ -46,6 +48,12 @@ else
 {
     app.UseExceptionHandler("/Home/Error");
 }
+
+// ELMS-21 — centralized exception logging, INSIDE UseExceptionHandler on
+// purpose: the handler middleware must stay outermost to render /Home/Error,
+// so this catches first, records the details, and rethrows to it. The generic
+// error page (and its no-sensitive-details guarantee) is unchanged.
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

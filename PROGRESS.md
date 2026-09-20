@@ -32,6 +32,7 @@
 - [x] ELMS-18 — Reporting filters + export
 - [x] ELMS-19 — Audit logging
 - [x] ELMS-20 — Role-based FAQ / Help
+- [x] ELMS-21 — Global exception handling + logging
 
 ## Session log
 
@@ -134,3 +135,17 @@
   (submit + approve/reject only) and points to Admin. Verified: build clean,
   18/18 tests, 24/24 live Development checks (auth gates, role-correct
   rendering, cross-role blocks, css 200). Temp smoke scripts removed.
+- 2026-09-20: ELMS-21 Global exception handling + logging DONE.
+  `Middleware/GlobalExceptionMiddleware` (registered inside UseExceptionHandler
+  in Program.cs) catches all unhandled request exceptions, logs timestamp,
+  method, path+query, user id/username (claims; null when anonymous), exception
+  type/message/stack trace, correlation id (`Activity.Current?.Id ??
+  TraceIdentifier`, matching the error page reference) to ILogger (structured
+  Error; Info/Warning untouched) + new `ExceptionLogs` table via
+  `IExceptionLogStore`/`ExceptionLogStore` (Scoped), then rethrows so the
+  generic /Home/Error page is unchanged. No per-controller try/catch. Migration
+  `20260920073825_AddExceptionLogs` applied to .\SQLEXPRESS/LeaveManagementDb
+  (usual seed-hash re-salt; both logins re-verified). Verified: build clean,
+  22/22 tests (4 new), live intentional-exception probe → generic 500 with zero
+  leak + full DB row confirmed, probe endpoint removed, probe row deleted
+  (ExceptionLogs at 0 rows). Temp scripts removed.

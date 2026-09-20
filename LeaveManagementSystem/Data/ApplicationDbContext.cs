@@ -18,6 +18,8 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    public DbSet<ExceptionLog> ExceptionLogs => Set<ExceptionLog>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -75,6 +77,22 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(a => a.ActionByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ELMS-21 — unhandled-exception records (no FK: anonymous requests and
+        // deactivated accounts must never block logging).
+        modelBuilder.Entity<ExceptionLog>(entity =>
+        {
+            entity.Property(e => e.Timestamp).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.HttpMethod).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.Path).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.Username).HasMaxLength(150);
+            entity.Property(e => e.ExceptionType).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Message).HasMaxLength(2000).IsRequired();
+            entity.Property(e => e.CorrelationId).HasMaxLength(100).IsRequired();
+
+            entity.HasIndex(e => e.Timestamp)
+                .HasDatabaseName("IX_ExceptionLogs_Timestamp");
         });
 
         // Seed accounts per DATABASE.md §4 / PROJECT.md §5.
