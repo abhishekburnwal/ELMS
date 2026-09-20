@@ -168,3 +168,4 @@ C:\AbhiLab\ELMS\LeaveManagementSystem.Tests\obj\Debug\net8.0\refint\LeaveManagem
 C:\AbhiLab\ELMS\LeaveManagementSystem.Tests\obj\Debug\net8.0\LeaveManagementSystem.Tests.pdb
 C:\AbhiLab\ELMS\LeaveManagementSystem.Tests\obj\Debug\net8.0\LeaveManagementSystem.Tests.genruntimeconfig.cache
 C:\AbhiLab\ELMS\LeaveManagementSystem.Tests\obj\Debug\net8.0\ref\LeaveManagementSystem.Tests.dll
+C:\AbhiLab\ELMS\LeaveManagementSystem.Tests\obj\Debug\net8.0\LeaveManagementSystem.Tests.sourcelink.json

@@ -70,6 +70,9 @@ connection string) → `dotnet publish -c Release -o ./publish` → smoke test
 
 ## Bonus scope (implemented)
 
+- **Help / FAQ** — role-scoped `FAQ / Help` pages (`/Admin/Faq`, `/Employee/Faq`)
+  with a shared leave-workflow strip and single-open accordion; each role sees
+  only its own FAQs (wiring: `LeaveManagementSystem/FAQ_WIRING.md`).
 - **Real-time notifications** — SignalR hub at `/hub/notifications`; the
   employee dashboard shows a toast the moment a request is approved/rejected.
 - **Reporting** — the admin leave-requests view filters by status, date range,

@@ -31,6 +31,7 @@
 - [x] ELMS-17 — SignalR real-time notifications
 - [x] ELMS-18 — Reporting filters + export
 - [x] ELMS-19 — Audit logging
+- [x] ELMS-20 — Role-based FAQ / Help
 
 ## Session log
 
@@ -125,3 +126,11 @@
   (clears invalid To, same-day allowed). Working-day calc + styling untouched.
   Tests 18/18 (4 new); live: min renders, past POST blocked with 0 rows,
   same-day-today → Pending. Artifacts cleaned.
+- 2026-09-20: ELMS-20 Role-based FAQ / Help DONE. `Faq()` on both controllers
+  (role-locked by existing `[Authorize]`), `FaqData` (7 employee + 6 admin
+  items, shared workflow steps), `_WorkflowStrip` + `_FaqAccordion` partials,
+  `Admin/Faq` + `Employee/Faq` views, `faq.css`, FAQ links in both menus,
+  `FAQ_WIRING.md`. Cancel/modify answer states no self-service cancel exists
+  (submit + approve/reject only) and points to Admin. Verified: build clean,
+  18/18 tests, 24/24 live Development checks (auth gates, role-correct
+  rendering, cross-role blocks, css 200). Temp smoke scripts removed.

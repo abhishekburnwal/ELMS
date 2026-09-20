@@ -1,0 +1,153 @@
+/* ELMS-20 — FAQ / Help styles. Palette, radius, and fonts come from site.css;
+   this file only adds the workflow strip + accordion. Visual language matches
+   UI_Prototype.html (screen-admin-faq / screen-employee-faq). */
+
+.workflow {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 24px;
+}
+
+.workflow h3 {
+    font-size: 15px;
+    margin: 0 0 4px;
+}
+
+.workflow .wf-sub {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+}
+
+.wf-steps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.wf-step {
+    flex: 1 1 110px;
+    min-width: 110px;
+    background: var(--teal-tint);
+    color: #2E4A41;
+    border: 1px solid #CBDCD6;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wf-step.decision {
+    background: var(--amber-tint);
+    border-color: #E4D3B3;
+    color: #7A5A1E;
+}
+
+.wf-arrow {
+    align-self: center;
+    padding: 0 6px;
+    color: var(--ink-soft);
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+
+.faq {
+    border-top: 1px solid var(--line);
+}
+
+.faq-item {
+    border-bottom: 1px solid var(--line);
+}
+
+.faq-q {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: none;
+    border: none;
+    padding: 14px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+}
+
+.faq-q:hover {
+    background: #F8F9F7;
+}
+
+.faq-q:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: -2px;
+}
+
+.faq-q .chev {
+    flex-shrink: 0;
+    color: var(--teal);
+    font-weight: 700;
+    transition: transform .15s ease;
+}
+
+.faq-q[aria-expanded="true"] .chev {
+    transform: rotate(90deg);
+}
+
+.faq-a {
+    display: none;
+    padding: 0 18px 16px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--ink-soft);
+}
+
+.faq-a.open {
+    display: block;
+}
+
+.faq-a strong {
+    color: var(--ink);
+}
+
+/* Tablet + mobile: stack workflow steps vertically, tighten shell padding.
+   Matches the app-shell breakpoints already in site.css. */
+@media (max-width: 760px) {
+    .wf-step {
+        flex: 1 1 100%;
+    }
+
+    .wf-arrow {
+        transform: rotate(90deg);
+        padding: 4px 0;
+        width: 100%;
+        text-align: center;
+    }
+
+    .main {
+        padding: 20px 16px;
+    }
+
+    .app {
+        grid-template-columns: 1fr;
+    }
+
+    .rail {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+    }
+}

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/faq.css" asp-append-version="true" />
 </head>
 <body>
 @{
@@ -34,12 +35,14 @@ else
                 <a class="@NavClass("Admin", "Index")" asp-controller="Admin" asp-action="Index">Dashboard</a>
                 <a class="@NavClass("Admin", "Employees")" asp-controller="Admin" asp-action="Employees">Employees</a>
                 <a class="@NavClass("Admin", "LeaveRequests")" asp-controller="Admin" asp-action="LeaveRequests">Leave Requests</a>
+                <a class="@NavClass("Admin", "Faq")" asp-controller="Admin" asp-action="Faq">FAQ / Help</a>
             }
             else
             {
                 <a class="@NavClass("Employee", "Dashboard")" asp-controller="Employee" asp-action="Dashboard">Dashboard</a>
                 <a class="@NavClass("Employee", "Apply")" asp-controller="Employee" asp-action="Apply">Apply Leave</a>
                 <a class="@NavClass("Employee", "History")" asp-controller="Employee" asp-action="History">History</a>
+                <a class="@NavClass("Employee", "Faq")" asp-controller="Employee" asp-action="Faq">FAQ / Help</a>
             }
             <form asp-controller="Account" asp-action="Logout" method="post" class="logout">
                 @Html.AntiForgeryToken()

@@ -1,0 +1,16 @@
+@* ELMS-20 — Admin help. Admin-only FAQs from FaqData + shared workflow strip. *@
+@{
+    ViewData["Title"] = "Help & FAQ — Admin";
+}
+
+<div class="topbar">
+    <h1>Help &amp; FAQ — Admin</h1>
+    <span class="who">Signed in as @User.Identity?.Name (Admin)</span>
+</div>
+
+<partial name="_WorkflowStrip" model="@("How a request moves through ELMS, end to end.")" />
+
+<div class="panel">
+    <h3>Admin FAQs</h3>
+    <partial name="_FaqAccordion" model="@LeaveManagementSystem.ViewModels.FaqData.AdminFaqs" />
+</div>

@@ -225,6 +225,10 @@ public class AdminController : Controller
     public async Task<IActionResult> Reject(int id, string? remarks) =>
         await Review(id, LeaveStatus.Rejected, remarks);
 
+    // ELMS-20 — role-scoped help; view renders Admin-only FAQs + shared workflow strip.
+    [HttpGet]
+    public IActionResult Faq() => View();
+
     private async Task<IActionResult> Review(int id, LeaveStatus decision, string? remarks)
     {
         var reviewerId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

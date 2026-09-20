@@ -1,0 +1,20 @@
+@* ELMS-20 — shared leave-workflow strip. @Model is the subtitle line; the
+   steps come from FaqData.WorkflowSteps so both roles render identical
+   content from a single source. *@
+@model string
+
+<div class="workflow">
+    <h3>Leave workflow</h3>
+    <p class="wf-sub">@Model</p>
+    <ol class="wf-steps">
+        @for (var i = 0; i < LeaveManagementSystem.ViewModels.FaqData.WorkflowSteps.Count; i++)
+        {
+            var step = LeaveManagementSystem.ViewModels.FaqData.WorkflowSteps[i];
+            if (i > 0)
+            {
+                <li class="wf-arrow" aria-hidden="true">&rarr;</li>
+            }
+            <li class="wf-step@(step.IsDecision ? " decision" : string.Empty)">@step.Label</li>
+        }
+    </ol>
+</div>

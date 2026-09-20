@@ -1,0 +1,16 @@
+@* ELMS-20 — Employee help. Employee-only FAQs from FaqData + shared workflow strip. *@
+@{
+    ViewData["Title"] = "Help & FAQ — Employee";
+}
+
+<div class="topbar">
+    <h1>Help &amp; FAQ — Employee</h1>
+    <span class="who">Signed in as @User.Identity?.Name</span>
+</div>
+
+<partial name="_WorkflowStrip" model="@("What happens after you hit Submit Request.")" />
+
+<div class="panel">
+    <h3>Employee FAQs</h3>
+    <partial name="_FaqAccordion" model="@LeaveManagementSystem.ViewModels.FaqData.EmployeeFaqs" />
+</div>

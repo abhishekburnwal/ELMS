@@ -1,0 +1,43 @@
+@* ELMS-20 — shared single-open accordion. Renders any IReadOnlyList<FaqItem>;
+   each role passes its own list, so no FAQ text is duplicated. First item is
+   open by default; the inline script toggles the rest (one open at a time).
+   Content is static (no user input), so AnswerHtml is rendered raw. *@
+@model IReadOnlyList<LeaveManagementSystem.ViewModels.FaqItem>
+
+<div class="faq" data-faq-group>
+    @for (var i = 0; i < Model.Count; i++)
+    {
+        var item = Model[i];
+        var open = i == 0;
+        <div class="faq-item">
+            <button type="button" class="faq-q" aria-expanded="@(open ? "true" : "false")">@item.Question <span class="chev" aria-hidden="true">&rsaquo;</span></button>
+            <div class="faq-a@(open ? " open" : string.Empty)">@Html.Raw(item.AnswerHtml)</div>
+        </div>
+    }
+</div>
+
+<script>
+    // Single-open accordion (delegated; guarded so duplicate partial renders
+    // on one page never double-bind). Mirrors UI_Prototype.html behaviour.
+    (function () {
+        if (window.__elmsFaqBound) return;
+        window.__elmsFaqBound = true;
+        document.addEventListener('click', function (e) {
+            var q = e.target && e.target.closest ? e.target.closest('.faq-q') : null;
+            if (!q) return;
+            var group = q.closest('[data-faq-group]');
+            var answer = q.nextElementSibling;
+            var willOpen = q.getAttribute('aria-expanded') !== 'true';
+            if (group) {
+                group.querySelectorAll('.faq-q').forEach(function (other) {
+                    other.setAttribute('aria-expanded', 'false');
+                });
+                group.querySelectorAll('.faq-a').forEach(function (otherA) {
+                    otherA.classList.remove('open');
+                });
+            }
+            q.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            if (answer) answer.classList.toggle('open', willOpen);
+        });
+    })();
+</script>

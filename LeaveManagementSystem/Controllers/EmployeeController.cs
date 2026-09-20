@@ -75,4 +75,8 @@ public class EmployeeController : Controller
         var history = await _leaves.GetHistoryAsync(CurrentUserId());
         return View(history);
     }
+
+    // ELMS-20 — role-scoped help; view renders Employee-only FAQs + shared workflow strip.
+    [HttpGet]
+    public IActionResult Faq() => View();
 }

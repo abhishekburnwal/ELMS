@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-09-20 — Role-based FAQ / Help (ELMS-20)
+
+- **New pages** — `FAQ / Help` in both the Employee and Admin menus
+  (`/Employee/Faq`, `/Admin/Faq`), each rendering only its role's FAQs
+  (7 employee, 6 admin) behind the controllers' existing `[Authorize(Roles=…)]`.
+- **Shared, not duplicated** — one `FaqData` source (`ViewModels/FaqViewModels.cs`),
+  one `_WorkflowStrip` partial (Employee → … → Status Updated) and one
+  single-open `_FaqAccordion` partial; new `wwwroot/css/faq.css` in the existing
+  navy/teal/amber language, responsive down to mobile. Wiring guide:
+  `LeaveManagementSystem/FAQ_WIRING.md`.
+- **Cancel/modify answer** reflects the current workflow: no self-service
+  cancel/modify exists (`LeaveService` is submit + approve/reject only), so the
+  answer says so and points the employee to their Admin.
+
+Changed files:
+- `LeaveManagementSystem/Controllers/AdminController.cs` (`Faq()` action)
+- `LeaveManagementSystem/Controllers/EmployeeController.cs` (`Faq()` action)
+- `LeaveManagementSystem/ViewModels/FaqViewModels.cs` (new)
+- `LeaveManagementSystem/Views/Admin/Faq.cshtml` (new)
+- `LeaveManagementSystem/Views/Employee/Faq.cshtml` (new)
+- `LeaveManagementSystem/Views/Shared/_WorkflowStrip.cshtml` (new)
+- `LeaveManagementSystem/Views/Shared/_FaqAccordion.cshtml` (new)
+- `LeaveManagementSystem/wwwroot/css/faq.css` (new)
+- `LeaveManagementSystem/Views/Shared/_Layout.cshtml` (FAQ links + css)
+- `LeaveManagementSystem/FAQ_WIRING.md` (new)
+
+Verified: build clean (0 warn/0 err); 18/18 unit tests pass; live smoke on
+Development (24/24 checks) — anon bounces to login, both FAQ pages render
+200 with role-correct content, cross-role URLs blocked both directions,
+`faq.css` serves 200.
+
 ## 2026-09-18 — Apply Leave date validation (no past dates, dynamic To Date)
 
 - **From Date:** only today and future dates are selectable (`min = today` on
