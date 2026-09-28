@@ -1,0 +1,46 @@
+@model LeaveManagementSystem.ViewModels.HolidayFormViewModel
+@{
+    ViewData["Title"] = Model.Id.HasValue ? "Edit Holiday" : "Add Holiday";
+    var action = Model.Id.HasValue ? "Edit" : "Create";
+}
+
+<div class="topbar">
+    <h1>@ViewData["Title"]</h1>
+</div>
+
+<div class="panel">
+    <div class="body">
+        <form asp-action="@action" method="post">
+            @Html.AntiForgeryToken()
+            @if (Model.Id.HasValue)
+            {
+                <input type="hidden" asp-for="Id" />
+            }
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="field">
+                <label asp-for="Name"></label>
+                <input asp-for="Name" class="form-control" maxlength="200" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Date"></label>
+                <input asp-for="Date" type="date" class="form-control" />
+                <span asp-validation-for="Date" class="text-danger"></span>
+                <small style="color:var(--ink-soft);">Saturday/Sunday cannot be added — they are automatic weekends.</small>
+            </div>
+            <div class="field">
+                <label asp-for="Description"></label>
+                <input asp-for="Description" class="form-control" maxlength="500" />
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button type="submit" class="btn-elms btn-elms-auto">Save</button>
+                <a asp-action="Index" class="btn-elms btn-elms-auto" style="text-decoration:none; background:#fff; color:var(--navy); border:1px solid var(--line);">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

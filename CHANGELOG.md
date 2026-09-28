@@ -1,5 +1,133 @@
 # Changelog
 
+## 2026-09-27 — Admin backdate fix: Employee + Date selector, role-secured bypass (ELMS-34–35)
+
+### Fix
+- Admin `Attendance/Mark` had a raw numeric Employee Id input; it now has an Employee dropdown + Date picker (repopulated on validation failure; selecting an employee is validated). Admin picks Employee + Date, enters Hours + Project + Remarks, saves — any past working date.
+- Secure bypass made explicit: employee `Submit` is `[Authorize(Roles="Employee")]` AND today-only in the service; admin `Mark`/`Correct` are `[Authorize(Roles="Admin")]` with NO today-equality rule — the role attribute, not caller honesty, grants the bypass. Service guards (future/weekend/holiday) still apply to admins, so those days keep rendering Weekend/Holiday and leave keeps rendering Leave; a backdated entry flips Absent → Present.
+- No schema change; Leave/Attendance functionality and UI otherwise untouched; SQL Server Express only.
+
+### Tests (ELMS-35)
+- New `Tests/AdminBackdateTests.cs` (6 tests): endpoint role-separation matrix (Submit=Employee-only; Mark/Correct/Report/Daily/Monthly/EmployeeWise=Admin-only), same-back-date employee-rejected/admin-succeeds, Absent → Present flip with hours/project detail, backdated edit + audit row, Weekend/Holiday/Leave rules hold, future-date rejection.
+
+Changed files: `Controllers/AttendanceController.cs` (IEmployeeService, Mark dropdown data), `Views/Attendance/Mark.cshtml` (select), `ViewModels/AttendanceViewModels.cs` (UserId range validation), `Tests/AdminBackdateTests.cs` (new).
+
+Verified: build clean (0 warn/0 err); 73/73 tests pass (67 existing + 6 new); DB unchanged (no migration; 6 applied; seed users intact); no SQLite reference in any csproj.
+
+
+## 2026-09-27 — Timesheet rules: no backfill, auto-Absent, audited admin corrections (ELMS-31–33)
+
+### Journey check (existing behavior confirmed, then hardened)
+- Employee current-day popup submission, duplicate/past/future/weekend/holiday rejection, missed-day auto-Absent at read time, common-calendar precedence, and admin Correct/Mark all already existed from Phases 8–9. Gaps found and closed: admin corrections were NOT audited, admin Mark allowed weekends/holidays, and the employee Month calendar showed Absent on approved-leave days.
+
+### Employee rules (ELMS-31)
+- Timesheet only for the CURRENT date via the Month-calendar popup (Date read-only, Hours, Project, Remarks). `SubmitDailyAttendanceAsync` rejects past/future dates, weekends, holidays, and duplicates — direct API posts with forged dates are rejected the same way (covered by a bypass test).
+- A missed working day reads Absent the next day automatically; there is no employee edit/backfill endpoint, so Tuesday cannot fill Monday. Weekends read Weekend, holidays read Holiday, approved leave reads Leave — never Absent.
+
+### Admin rules + audit (ELMS-32)
+- Admin views employee-wise calendars (selector + month/year), daily/monthly/employee-wise lists, and the centralized hours/projects Report — unchanged.
+- Admin Correct (by record) and Mark/Upsert (past working dates only: weekends, holidays, and future dates rejected) accept Hours + Project + Remarks.
+- Every admin add/correction writes an `AuditLogs` row in the same transaction: `AttendanceRecordId`, action Added/Corrected, details “date · status · hours · project”, acting admin id. Schema: `LeaveRequestId` nullable, new `AttendanceRecordId?` (FK, Restrict) + `Details nvarchar(500)?` via migration `20260927123644_AddAttendanceAudit` (SQL Server Express only).
+- `Attendance/Month` is now leave-aware: approved days show Leave (Pending for pending), never Absent. Priority everywhere: Weekend > Holiday > Leave > Timesheet > Absent/NoRecord.
+
+### Tests (ELMS-33)
+- New `Tests/TimesheetRulesTests.cs` (10 tests, past-relative dates so they hold on any run date): Monday Present/Absent pair, backfill API-bypass rejection, Weekend/Holiday/Leave priority, admin backfill success + audit row, correction audit details, weekend/holiday upsert rejection with zero audit rows, current-day end-to-end, audit schema.
+
+Changed files (new unless noted):
+- `Models/Entities/AuditLog.cs` (edit), `Data/ApplicationDbContext.cs` (edit), `Data/Migrations/20260927123644_AddAttendanceAudit.cs` (new)
+- `Services/Interfaces/IAuditService.cs` (edit), `Services/AuditService.cs` (edit)
+- `Services/AttendanceService.cs` (edit: audit wiring, working-date guard on Upsert), `Services/Interfaces/IAttendanceService.cs` (edit: actor id params)
+- `Controllers/AttendanceController.cs` (edit: leave-aware Month, admin id passthrough)
+- `ViewModels/AttendanceViewModels.cs` (edit: LeaveByDate), `Views/Attendance/Month.cshtml` (edit: priority rendering)
+- `Tests/TimesheetRulesTests.cs` (new), `Tests/FakeInfra.cs` (edit: FakeAudit)
+- `CURRENT_SESSION.md`, `MEMORY.md` (edit), `PROGRESS.md` (edit), docs `BACKLOG.md` + `DATABASE.md` (edit)
+
+Verified: build clean (0 warn/0 err); 67/67 tests pass (57 existing + 10 new); migration applied to `.\SQLEXPRESS/LeaveManagementDb` (AuditLogs columns confirmed via INFORMATION_SCHEMA; 6 migrations in history; 2 seed users intact); no SQLite reference in any csproj.
+
+
+## 2026-09-27 — Click-to-submit attendance with hours & project (ELMS-28–30)
+
+### Employee: click current date → popup → submit (ELMS-28)
+- `Attendance/Month` is now interactive: only the current-date cell is clickable (working day + unmarked) and opens a Bootstrap modal with Date (read-only), Working Hours (default 9), Project Name, and optional Remarks → POST `Attendance/Submit`.
+- New `AttendanceService.SubmitDailyAttendanceAsync`: current date ONLY — past/future dates rejected; weekends, configured holidays, and duplicate submissions rejected; hours 0.5–24 and project name required. Backend is the source of truth (popup date re-validated server-side).
+- Submitted days render Present with hours + project on the employee calendar (e.g. 20 Tue, Present, 9 Hours, Project: ELMS Development).
+
+### Admin: employee-wise calendar + centralized report (ELMS-29)
+- `Calendar/Index` for Admins: employee dropdown + month picker (defaults to first employee), per-date detail modals showing status, working hours, project, remarks, check-in/out. Leave/Holiday/Weekend integration unchanged.
+- New `Attendance/Report`: centralized month view — per-employee totals (days present, total hours, project list) plus every daily record with hours and project, so the admin sees who worked on which project and for how long.
+- `EmployeeWise` gained Total Hours, Projects, and per-employee Calendar-link columns; `Correct`/`Mark` accept hours/project. Report linked from the Daily toolbar.
+
+### Schema, validation, tests (ELMS-30)
+- Migration `20260927122735_AddAttendanceHoursAndProject`: `AttendanceRecords.WorkingHours decimal(4,2)?`, `ProjectName nvarchar(200)?` (SQL Server Express only).
+- `CalendarDay` carries `WorkingHours`/`ProjectName`/`Remarks`/`AttendanceId`; detail text e.g. “9 Hours · Project: ELMS Development”.
+- Validation server-side throughout (`ServiceResult` + DataAnnotations); unhandled exceptions still flow to `GlobalExceptionMiddleware` (ILogger + `ExceptionLogs`).
+- New `Tests/DailyAttendanceSubmissionTests.cs` (18 cases): submit success, duplicate/past/future/weekend/holiday rejection, hours + project validation, popup model validation, calendar hours/project display, leave/holiday precedence, role attributes (Submit=Employee, Report=Admin), no-SQLite check.
+
+Changed files (new unless noted):
+- `Models/Entities/AttendanceRecord.cs` (edit), `Data/ApplicationDbContext.cs` (edit), `Data/Migrations/20260927122735_AddAttendanceHoursAndProject.cs` (new)
+- `Services/Interfaces/IAttendanceService.cs` (edit: Submit + optional hours/project on Correct/Upsert), `Services/AttendanceService.cs` (edit)
+- `Services/Interfaces/IEmployeeCalendarService.cs` (edit: CalendarDay fields), `Services/EmployeeCalendarService.cs` (edit)
+- `Controllers/AttendanceController.cs` (edit: Month state + Submit + Report), `Controllers/CalendarController.cs` (edit: employee selector + attendance details)
+- `ViewModels/AttendanceViewModels.cs` (edit: Submit form, Month state, Report rows, calendar attendance map)
+- `Views/Attendance/Month.cshtml` (interactive + modal), `Views/Calendar/Index.cshtml` (selector + detail modals), `Views/Attendance/Report.cshtml` (new), `Views/Attendance/EmployeeWise.cshtml`, `Correct.cshtml`, `Mark.cshtml`, `Daily.cshtml` (edit)
+- `wwwroot/css/site.css` (edit: clickable cells + details)
+- `Tests/DailyAttendanceSubmissionTests.cs` (new); `CURRENT_SESSION.md`, `MEMORY.md` (new)
+
+Verified: build clean (0 warn/0 err); 57/57 tests pass (39 existing + 18 new); migration applied to `.\SQLEXPRESS/LeaveManagementDb` (WorkingHours decimal + ProjectName nvarchar confirmed via INFORMATION_SCHEMA; 5 migrations in history; 2 seed users intact); no SQLite reference in any csproj.
+
+
+## 2026-09-27 — Attendance, Holiday Calendar & Leave integration (ELMS-22–27)
+
+### Centralized Working Day / Calendar service (ELMS-22)
+- **Single decider** — `Services/WorkingCalendarService.cs` (`IWorkingCalendarService`): Monday–Friday = working day, Saturday/Sunday = weekend, configured holiday = holiday. Leave and Attendance both call it; no separate calculations.
+- `Services/LeaveDaysCalculator.cs` keeps its 2-arg signature (all 22 old tests untouched) plus a holiday-aware overload used through the service.
+- `Services/EmployeeService.cs` keeps its 2-arg constructor plus a holiday-aware 3-arg overload wired in `Program.cs`; `AdminController` employees list + Excel export and the History/Dashboard/LeaveRequests views count through the shared service (`ViewBag.Holidays`).
+
+### Attendance module (ELMS-23)
+- **New tables via migration `20260927112906_AddAttendanceAndHolidays`** (SQL Server Express only): `AttendanceRecords` (unique `IX_AttendanceRecords_UserId_Date`, `IX_AttendanceRecords_Date`; FK → Users, Restrict).
+- Employee: `Attendance/Today` (check-in → Present, check-out stamps time; blocked on weekends/holidays with a clear message), `History` (last 60 days), `Month` grid.
+- Admin: `Daily` (by date), `Monthly` report, `EmployeeWise` summary, `Correct` (by record id), `Mark` (manual upsert; future dates rejected server-side).
+- Statuses: Present, Absent, Half Day, WFH (plus Leave/Holiday/Weekend markers for corrections).
+
+### Holiday Calendar (ELMS-24)
+- **New `Holidays` table** (unique `IX_Holidays_Date`, SQL Server Express only).
+- Admin: add/edit/delete (`Holiday/Form`), import CSV/`.xlsx` (header `Name,Date,Description`; weekends + duplicates skipped with imported/skipped counts; 5 MB limit; extension whitelist), export to Excel (ClosedXML, streamed).
+- Weekends can never be added manually (Sat/Sun = automatic weekend, enforced server-side). Both roles view `Holiday/Index` (by year) and export; management endpoints are `[Authorize(Roles="Admin")]` (attribute-tested, not just UI-hidden).
+
+### Common Employee Calendar (ELMS-25)
+- `Services/EmployeeCalendarService.cs` merges existing records only (never duplicates) with precedence Weekend > Holiday > ApprovedLeave > PendingLeave > Attendance > Absent (past working day) / NoRecord (future). Rejected leaves fall through and are never shown as leave.
+- `Calendar/Index` responsive month grid (7→4→2 columns) with legend badges in the ELMS navy/teal/amber language; Admins may pass `userId` to inspect one employee.
+- Pending→Approved/Rejected updates appear on next read (no snapshot table).
+
+### UI wiring (ELMS-26)
+- Rail nav extended per role; `site.css` appendix (status badges, `.cal-grid`, `.linklike`); existing Leave layout untouched except the holiday-aware Days cell.
+
+### Tests (ELMS-27)
+- New `LeaveManagementSystem.Tests/AttendanceHolidayCalendarTests.cs` (17 tests + `FakeHolidayRepository`/`FakeAttendanceRepository`): weekend rule, Fri–Mon=2, week-minus-weekend=5, holiday exclusion, manual-holiday validation, CSV import skips, admin CRUD round-trip, full Mon→Mon integration scenario, status-change updates, working-day check-in, role attributes, SQL-Express-only check.
+
+Changed files (new unless noted):
+- `LeaveManagementSystem/Models/Entities/Holiday.cs`, `AttendanceRecord.cs`
+- `LeaveManagementSystem/Models/Enums/AttendanceStatus.cs`, `CalendarDayStatus.cs`
+- `LeaveManagementSystem/Repositories/Interfaces/IHolidayRepository.cs`, `IAttendanceRepository.cs`
+- `LeaveManagementSystem/Repositories/HolidayRepository.cs`, `AttendanceRepository.cs`
+- `LeaveManagementSystem/Services/Interfaces/IWorkingCalendarService.cs`, `IHolidayService.cs`, `IAttendanceService.cs`, `IEmployeeCalendarService.cs`
+- `LeaveManagementSystem/Services/WorkingCalendarService.cs`, `HolidayService.cs`, `AttendanceService.cs`, `EmployeeCalendarService.cs`
+- `LeaveManagementSystem/Services/LeaveDaysCalculator.cs` (edit: overload), `EmployeeService.cs` (edit: overload + holiday-aware usage)
+- `LeaveManagementSystem/Controllers/HolidayController.cs`, `AttendanceController.cs`, `CalendarController.cs`
+- `LeaveManagementSystem/Controllers/AdminController.cs` (edit: shared-service counting + ViewBag holidays), `EmployeeController.cs` (edit: ViewBag holidays)
+- `LeaveManagementSystem/ViewModels/HolidayViewModels.cs`, `AttendanceViewModels.cs`
+- `LeaveManagementSystem/Views/Holiday/*.cshtml`, `Views/Attendance/*.cshtml`, `Views/Calendar/Index.cshtml`
+- `LeaveManagementSystem/Views/Shared/_Layout.cshtml` (edit: nav), `wwwroot/css/site.css` (edit: appendix)
+- `LeaveManagementSystem/Views/Employee/History.cshtml`, `Dashboard.cshtml`, `Views/Admin/LeaveRequests.cshtml` (edit: holiday-aware Days cell)
+- `LeaveManagementSystem/Data/ApplicationDbContext.cs` (edit: DbSets + config)
+- `LeaveManagementSystem/Data/Migrations/20260927112906_AddAttendanceAndHolidays.cs` (new)
+- `LeaveManagementSystem/Program.cs` (edit: DI)
+- `LeaveManagementSystem.Tests/AttendanceHolidayCalendarTests.cs` (new)
+
+Verified: build clean (0 warn/0 err); 39/39 tests pass (22 existing + 17 new); migration applied to `.\SQLEXPRESS/LeaveManagementDb` (sqlcmd: Holidays 0 rows, AttendanceRecords 0 rows, Users admin@example.com/Role1 + employee@example.com/Role2 intact); no SQLite reference in any csproj; Razor views compile with the build.
+
+
+
 ## 2026-09-20 — Global exception handling + logging (ELMS-21)
 
 - **New middleware** — `Middleware/GlobalExceptionMiddleware` catches every

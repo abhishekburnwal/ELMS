@@ -12,11 +12,14 @@ public class EmployeeController : Controller
 {
     private readonly ILeaveService _leaves;
     private readonly IEmployeeService _employees;
+    private readonly IWorkingCalendarService _calendar;
 
-    public EmployeeController(ILeaveService leaves, IEmployeeService employees)
+    public EmployeeController(
+        ILeaveService leaves, IEmployeeService employees, IWorkingCalendarService calendar)
     {
         _leaves = leaves;
         _employees = employees;
+        _calendar = calendar;
     }
 
     private int CurrentUserId() =>
@@ -29,6 +32,10 @@ public class EmployeeController : Controller
         var user = await _employees.GetByIdAsync(userId);
         var (used, remaining) = await _employees.GetLeaveUsageAsync(userId);
         var history = await _leaves.GetHistoryAsync(userId);
+        ViewBag.Holidays = history.Count > 0
+            ? await _calendar.GetHolidaysInRangeAsync(
+                history.Min(l => l.FromDate.Date), history.Max(l => l.ToDate.Date))
+            : new HashSet<DateTime>();
 
         return View(new EmployeeDashboardViewModel
         {
@@ -73,6 +80,10 @@ public class EmployeeController : Controller
     public async Task<IActionResult> History()
     {
         var history = await _leaves.GetHistoryAsync(CurrentUserId());
+        ViewBag.Holidays = history.Count > 0
+            ? await _calendar.GetHolidaysInRangeAsync(
+                history.Min(l => l.FromDate.Date), history.Max(l => l.ToDate.Date))
+            : new HashSet<DateTime>();
         return View(history);
     }
 

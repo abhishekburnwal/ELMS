@@ -1,0 +1,136 @@
+@model LeaveManagementSystem.ViewModels.AttendanceMonthViewModel
+@{
+    ViewData["Title"] = "Monthly Attendance";
+    var first = new DateTime(Model.Year, Model.Month, 1);
+    var days = DateTime.DaysInMonth(Model.Year, Model.Month);
+    var prev = first.AddMonths(-1);
+    var next = first.AddMonths(1);
+    var today = DateTime.Today;
+}
+
+<div class="topbar">
+    <h1>Monthly Attendance — @first.ToString("yyyy MMMM")</h1>
+    <span class="who">Click today's date to mark attendance</span>
+</div>
+
+@if (TempData["Message"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<div class="panel">
+    <div class="body" style="display:flex; gap:10px;">
+        <a asp-action="Month" asp-route-year="@prev.Year" asp-route-month="@prev.Month" class="btn-elms btn-elms-auto" style="text-decoration:none;">← Prev</a>
+        <a asp-action="Month" asp-route-year="@next.Year" asp-route-month="@next.Month" class="btn-elms btn-elms-auto" style="text-decoration:none;">Next →</a>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="cal-grid">
+        @for (var d = 1; d <= days; d++)
+        {
+            var date = new DateTime(Model.Year, Model.Month, d);
+            var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+            var isHoliday = Model.Holidays.Contains(date);
+            Model.ByDate.TryGetValue(date, out var rec);
+            Model.LeaveByDate.TryGetValue(date, out var leave);
+            var isToday = date == today;
+            var clickable = isToday && Model.CanMarkToday && rec is null;
+            // Priority: Weekend > Holiday > Leave > Timesheet > Absent.
+            var cls = isWeekend ? "weekend"
+                : isHoliday ? "holiday"
+                : leave == "Leave" ? "approved"
+                : leave == "Pending" ? "pending"
+                : rec is not null ? rec.Status.ToString().ToLower()
+                : (date < today ? "absent" : "norecord");
+            var label = isWeekend ? "Weekend"
+                : isHoliday ? "Holiday"
+                : leave ?? (rec is not null ? rec.Status.ToString() : (date < today ? "Absent" : "—"));
+            <div class="cal-day @cls @(clickable ? "cal-clickable" : "")"
+                 @(clickable ? "role=button tabindex=0 title=Click to mark attendance" : "")
+                 @(clickable ? "data-mark-today=true" : "")>
+                <div class="cal-date">@d <span class="cal-dow">@date.ToString("ddd")</span></div>
+                <div class="cal-status">@label</div>
+                @if (rec?.WorkingHours.HasValue == true || !string.IsNullOrWhiteSpace(rec?.ProjectName))
+                {
+                    <div class="cal-detail">
+                        @if (rec!.WorkingHours.HasValue)
+                        {
+                            <span>@rec.WorkingHours.Value.ToString("0.##") Hours</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(rec.ProjectName))
+                        {
+                            <span>Project: @rec.ProjectName</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@if (Model.CanMarkToday)
+{
+    <div class="modal fade" id="markModal" tabindex="-1" aria-labelledby="markModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-action="Submit" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="markModalLabel">Mark Attendance — @today.ToString("yyyy-MM-dd dddd")</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="field">
+                            <label>Date</label>
+                            <input type="text" value="@today.ToString("yyyy-MM-dd dddd")" class="form-control" readonly />
+                            <input type="hidden" name="Date" value="@today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="field">
+                            <label for="WorkingHours">Working Hours</label>
+                            <input type="number" id="WorkingHours" name="WorkingHours" class="form-control"
+                                   min="0.5" max="24" step="0.5" value="9" required />
+                        </div>
+                        <div class="field">
+                            <label for="ProjectName">Project Name</label>
+                            <input type="text" id="ProjectName" name="ProjectName" class="form-control"
+                                   maxlength="200" placeholder="e.g. ELMS Development" required />
+                        </div>
+                        <div class="field">
+                            <label for="Remarks">Remarks (optional)</label>
+                            <input type="text" id="Remarks" name="Remarks" class="form-control" maxlength="500" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-elms btn-elms-auto" data-bs-dismiss="modal" style="background:#fff; color:var(--navy); border:1px solid var(--line);">Cancel</button>
+                        <button type="submit" class="btn-elms btn-elms-auto">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.CanMarkToday)
+    {
+        <script>
+            (function () {
+                var cell = document.querySelector('[data-mark-today]');
+                if (!cell) return;
+                function open() {
+                    var modal = new bootstrap.Modal(document.getElementById('markModal'));
+                    modal.show();
+                }
+                cell.addEventListener('click', open);
+                cell.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+                });
+            })();
+        </script>
+    }
+}

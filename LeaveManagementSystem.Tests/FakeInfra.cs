@@ -66,4 +66,15 @@ public sealed class FakeAudit : IAuditService
             Action = action,
             ActionDate = DateTime.UtcNow
         });
+
+    public Task RecordAttendanceChangeAsync(
+        int? attendanceRecordId, int actionByUserId, string action, string? details) =>
+        _repo.AddAuditAsync(new AuditLog
+        {
+            AttendanceRecordId = attendanceRecordId,
+            ActionByUserId = actionByUserId,
+            Action = action,
+            Details = details,
+            ActionDate = DateTime.UtcNow
+        });
 }

@@ -1,0 +1,54 @@
+@model LeaveManagementSystem.ViewModels.AdminMonthlyAttendanceViewModel
+@{
+    ViewData["Title"] = "Monthly Attendance Report";
+    var first = new DateTime(Model.Year, Model.Month, 1);
+    var prev = first.AddMonths(-1);
+    var next = first.AddMonths(1);
+}
+
+<div class="topbar">
+    <h1>Monthly Report — @first.ToString("yyyy MMMM")</h1>
+</div>
+
+<div class="panel">
+    <div class="body" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a asp-action="Monthly" asp-route-year="@prev.Year" asp-route-month="@prev.Month" class="btn-elms btn-elms-auto" style="text-decoration:none;">← Prev</a>
+        <a asp-action="Monthly" asp-route-year="@next.Year" asp-route-month="@next.Month" class="btn-elms btn-elms-auto" style="text-decoration:none;">Next →</a>
+        <span style="flex:1;"></span>
+        <a asp-action="Daily" class="btn-elms btn-elms-auto" style="text-decoration:none;">Daily</a>
+        <a asp-action="EmployeeWise" asp-route-year="@Model.Year" asp-route-month="@Model.Month" class="btn-elms btn-elms-auto" style="text-decoration:none;">Employee-wise</a>
+    </div>
+</div>
+
+<div class="panel">
+    <h3>Records (@Model.Records.Count)</h3>
+    <table class="elms">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Employee</th>
+                <th>Status</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Records.Count == 0)
+        {
+            <tr><td colspan="6" style="color:var(--ink-soft);">No records this month.</td></tr>
+        }
+        @foreach (var r in Model.Records.OrderBy(r => r.Date).ThenBy(r => r.User?.FullName))
+        {
+            <tr>
+                <td>@r.Date.ToString("yyyy-MM-dd")</td>
+                <td>@(r.User?.FullName ?? $"User #{r.UserId}")</td>
+                <td><span class="badge @r.Status.ToString().ToLower()">@r.Status</span></td>
+                <td>@(r.CheckIn?.ToString("HH:mm") ?? "—")</td>
+                <td>@(r.CheckOut?.ToString("HH:mm") ?? "—")</td>
+                <td><a asp-action="Correct" asp-route-id="@r.Id">Correct</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

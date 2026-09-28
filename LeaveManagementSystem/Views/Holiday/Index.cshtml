@@ -1,0 +1,98 @@
+@model LeaveManagementSystem.ViewModels.HolidayListViewModel
+@{
+    ViewData["Title"] = "Holiday Calendar";
+    var isAdmin = User.IsInRole("Admin");
+    var prev = Model.Year - 1;
+    var next = Model.Year + 1;
+}
+
+<div class="topbar">
+    <h1>Holiday Calendar — @Model.Year</h1>
+    <span class="who">Sat/Sun are automatic weekends</span>
+</div>
+
+@if (TempData["Message"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<div class="panel">
+    <h3>Year</h3>
+    <div class="body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <a asp-action="Index" asp-route-year="@prev" class="btn-elms btn-elms-auto" style="text-decoration:none;">← @prev</a>
+        <form asp-action="Index" method="get" style="display:flex; gap:8px; align-items:center;">
+            <input type="number" name="year" value="@Model.Year" min="2000" max="2100" class="form-control" style="width:120px;" />
+            <button type="submit" class="btn-elms btn-elms-auto">Go</button>
+        </form>
+        <a asp-action="Index" asp-route-year="@next" class="btn-elms btn-elms-auto" style="text-decoration:none;">@next →</a>
+        <span style="flex:1;"></span>
+        <a asp-action="Export" asp-route-year="@Model.Year" class="btn-elms btn-elms-auto" style="text-decoration:none;">Export Excel</a>
+        @if (isAdmin)
+        {
+            <a asp-action="Create" class="btn-elms btn-elms-auto" style="text-decoration:none;">Add Holiday</a>
+        }
+    </div>
+</div>
+
+@if (isAdmin)
+{
+    <div class="panel">
+        <h3>Import holidays (CSV / Excel)</h3>
+        <div class="body">
+            <form asp-action="Import" method="post" enctype="multipart/form-data" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                @Html.AntiForgeryToken()
+                <input type="file" name="file" accept=".csv,.xlsx" class="form-control" style="max-width:320px;" />
+                <button type="submit" class="btn-elms btn-elms-auto">Upload</button>
+                <span style="color:var(--ink-soft); font-size:13px;">Columns: Name, Date (yyyy-MM-dd), Description. Weekends &amp; duplicates are skipped.</span>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="panel">
+    <h3>Holidays (@Model.Holidays.Count)</h3>
+    <table class="elms">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Name</th>
+                <th>Description</th>
+                @if (isAdmin)
+                {
+                    <th>Actions</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Holidays.Count == 0)
+        {
+            <tr><td colspan="@(isAdmin ? 5 : 4)" style="color:var(--ink-soft);">No configured holidays for @Model.Year. Weekends still apply.</td></tr>
+        }
+        @foreach (var h in Model.Holidays)
+        {
+            <tr>
+                <td>@h.Date.ToString("yyyy-MM-dd")</td>
+                <td>@h.Date.ToString("dddd")</td>
+                <td>@h.Name</td>
+                <td>@(h.Description ?? "—")</td>
+                @if (isAdmin)
+                {
+                    <td style="white-space:nowrap;">
+                        <a asp-action="Edit" asp-route-id="@h.Id">Edit</a>
+                        <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Delete this holiday?');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@h.Id" />
+                            <button type="submit" class="linklike">Delete</button>
+                        </form>
+                    </td>
+                }
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

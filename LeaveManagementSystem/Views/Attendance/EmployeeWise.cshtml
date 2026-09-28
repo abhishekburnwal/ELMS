@@ -1,0 +1,65 @@
+@model LeaveManagementSystem.ViewModels.AdminEmployeeWiseViewModel
+@{
+    ViewData["Title"] = "Employee-wise Attendance";
+    var first = new DateTime(Model.Year, Model.Month, 1);
+    var days = DateTime.DaysInMonth(Model.Year, Model.Month);
+}
+
+<div class="topbar">
+    <h1>Employee-wise — @first.ToString("yyyy MMMM")</h1>
+</div>
+
+<div class="panel">
+    <div class="body">
+        <form asp-action="EmployeeWise" method="get" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input type="month" name="month" value="@first.ToString("yyyy-MM")" class="form-control" style="width:170px;"
+                   oninput="var p=this.value.split('-'); if(p.length===2){this.form.year.value=p[0]; this.form.month.value=Number(p[1]);}" />
+            <input type="hidden" name="year" value="@Model.Year" />
+            <input type="hidden" name="month" value="@Model.Month" />
+            <input type="text" name="search" value="@Model.Search" placeholder="Search name/email" class="form-control" style="max-width:240px;" />
+            <button type="submit" class="btn-elms btn-elms-auto">Filter</button>
+        </form>
+    </div>
+</div>
+
+<div class="panel">
+    <table class="elms">
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Present</th>
+                <th>Absent*</th>
+                <th>Leave</th>
+                <th>HalfDay/WFH</th>
+                <th>Total Hours</th>
+                <th>Projects</th>
+                <th>Calendar</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Rows.Count == 0)
+        {
+            <tr><td colspan="8" style="color:var(--ink-soft);">No employees found.</td></tr>
+        }
+        @foreach (var (user, records) in Model.Rows)
+        {
+            var present = records.Count(r => r.Status == LeaveManagementSystem.Models.Enums.AttendanceStatus.Present);
+            var leave = records.Count(r => r.Status == LeaveManagementSystem.Models.Enums.AttendanceStatus.Leave);
+            var other = records.Count(r => r.Status is LeaveManagementSystem.Models.Enums.AttendanceStatus.HalfDay or LeaveManagementSystem.Models.Enums.AttendanceStatus.WorkFromHome);
+            var hours = records.Where(r => r.WorkingHours.HasValue).Sum(r => r.WorkingHours!.Value);
+            var projects = records.Where(r => !string.IsNullOrWhiteSpace(r.ProjectName)).Select(r => r.ProjectName!.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            <tr>
+                <td>@user.FullName<br /><small style="color:var(--ink-soft);">@user.Email</small></td>
+                <td>@present</td>
+                <td>@(days - records.Count)</td>
+                <td>@leave</td>
+                <td>@other</td>
+                <td>@(hours > 0 ? hours.ToString("0.##") : "—")</td>
+                <td>@(projects.Count > 0 ? string.Join(", ", projects) : "—")</td>
+                <td><a asp-controller="Calendar" asp-action="Index" asp-route-userId="@user.Id" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Calendar</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <div class="body"><small style="color:var(--ink-soft);">*Absent = days in month with no attendance record (includes weekends/holidays unless recorded).</small></div>
+</div>

@@ -1,0 +1,62 @@
+@model LeaveManagementSystem.ViewModels.AttendanceTodayViewModel
+@{
+    ViewData["Title"] = "Today's Attendance";
+}
+
+<div class="topbar">
+    <h1>Today's Attendance — @DateTime.Today.ToString("yyyy-MM-dd dddd")</h1>
+</div>
+
+@if (TempData["Message"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<div class="panel">
+    <h3>Status</h3>
+    <div class="body">
+        @if (Model.IsWeekend)
+        {
+            <p><span class="badge weekend">Weekend</span> Today is a weekend — check-in is disabled.</p>
+        }
+        else if (Model.IsHoliday)
+        {
+            <p><span class="badge holiday">Holiday</span> Today is a configured holiday — check-in is disabled.</p>
+        }
+        else if (Model.Today is null)
+        {
+            <p style="color:var(--ink-soft);">No check-in yet today.</p>
+            <form asp-action="CheckIn" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-elms btn-elms-auto">Check In (Present)</button>
+            </form>
+        }
+        else
+        {
+            <p>
+                <span class="badge @Model.Today.Status.ToString().ToLower()">@Model.Today.Status</span>
+                Checked in @(Model.Today.CheckIn?.ToString("HH:mm") ?? "—")
+                · Checked out @(Model.Today.CheckOut?.ToString("HH:mm") ?? "—")
+            </p>
+            @if (!Model.Today.CheckOut.HasValue)
+            {
+                <form asp-action="CheckOut" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-elms btn-elms-auto">Check Out</button>
+                </form>
+            }
+        }
+    </div>
+</div>
+
+<div class="panel">
+    <div class="body" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a asp-action="History" class="btn-elms btn-elms-auto" style="text-decoration:none;">History</a>
+        <a asp-action="Month" class="btn-elms btn-elms-auto" style="text-decoration:none;">Monthly Calendar</a>
+        <a asp-controller="Calendar" asp-action="Index" class="btn-elms btn-elms-auto" style="text-decoration:none;">My Calendar</a>
+    </div>
+</div>

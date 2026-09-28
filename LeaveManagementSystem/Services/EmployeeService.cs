@@ -11,12 +11,24 @@ public class EmployeeService : IEmployeeService
 {
     private readonly IUserRepository _users;
     private readonly ILeaveRepository _leaves;
+    private readonly IHolidayRepository? _holidays;
     private readonly PasswordHasher<User> _hasher = new();
 
     public EmployeeService(IUserRepository users, ILeaveRepository leaves)
     {
         _users = users;
         _leaves = leaves;
+    }
+
+    // Holiday-aware overload used by DI. Existing 2-arg constructor is kept
+    // so older unit tests keep compiling; holiday exclusion only applies
+    // when a repository is supplied.
+    public EmployeeService(
+        IUserRepository users, ILeaveRepository leaves, IHolidayRepository holidays)
+    {
+        _users = users;
+        _leaves = leaves;
+        _holidays = holidays;
     }
 
     public Task<List<User>> GetEmployeesAsync(string? search) =>
@@ -123,9 +135,19 @@ public class EmployeeService : IEmployeeService
         }
 
         var history = await _leaves.GetByUserAsync(userId);
-        var used = history
-            .Where(l => l.Status == LeaveStatus.Approved)
-            .Sum(l => LeaveDaysCalculator.CountWorkingDays(l.FromDate, l.ToDate));
+        var approved = history.Where(l => l.Status == LeaveStatus.Approved).ToList();
+
+        HashSet<DateTime>? holidaySet = null;
+        if (_holidays is not null && approved.Count > 0)
+        {
+            var min = approved.Min(l => l.FromDate.Date);
+            var max = approved.Max(l => l.ToDate.Date);
+            holidaySet = await _holidays.GetDateSetInRangeAsync(min, max);
+        }
+
+        var used = approved.Sum(l => holidaySet is null
+            ? LeaveDaysCalculator.CountWorkingDays(l.FromDate, l.ToDate)
+            : LeaveDaysCalculator.CountWorkingDays(l.FromDate, l.ToDate, holidaySet));
 
         return (used, user.LeaveBalance - used);
     }

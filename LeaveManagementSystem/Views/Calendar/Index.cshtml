@@ -1,0 +1,182 @@
+@model LeaveManagementSystem.ViewModels.EmployeeCalendarViewModel
+@using LeaveManagementSystem.Models.Enums
+@using LeaveManagementSystem.Services.Interfaces
+@{
+    ViewData["Title"] = "Calendar";
+    var isAdmin = User.IsInRole("Admin");
+    var first = new DateTime(Model.Year, Model.Month, 1);
+    var prev = first.AddMonths(-1);
+    var next = first.AddMonths(1);
+    string Css(CalendarDayStatus s) => s switch
+    {
+        CalendarDayStatus.Present => "present",
+        CalendarDayStatus.Absent => "absent",
+        CalendarDayStatus.ApprovedLeave => "approved",
+        CalendarDayStatus.PendingLeave => "pending",
+        CalendarDayStatus.RejectedLeave => "rejected",
+        CalendarDayStatus.Holiday => "holiday",
+        CalendarDayStatus.Weekend => "weekend",
+        CalendarDayStatus.HalfDay => "halfday",
+        CalendarDayStatus.WorkFromHome => "wfh",
+        _ => "norecord"
+    };
+    string Text(CalendarDay d) => d.Status switch
+    {
+        CalendarDayStatus.Present => "Present",
+        CalendarDayStatus.Absent => "Absent",
+        CalendarDayStatus.ApprovedLeave => "Leave",
+        CalendarDayStatus.PendingLeave => "Pending",
+        CalendarDayStatus.RejectedLeave => "Rejected",
+        CalendarDayStatus.Holiday => "Holiday",
+        CalendarDayStatus.Weekend => "Weekend",
+        CalendarDayStatus.HalfDay => "Half Day",
+        CalendarDayStatus.WorkFromHome => "WFH",
+        _ => "—"
+    };
+    string PrevUrl() => isAdmin
+        ? Url.Action("Index", new { year = prev.Year, month = prev.Month, userId = Model.SelectedUserId })!
+        : Url.Action("Index", new { year = prev.Year, month = prev.Month })!;
+    string NextUrl() => isAdmin
+        ? Url.Action("Index", new { year = next.Year, month = next.Month, userId = Model.SelectedUserId })!
+        : Url.Action("Index", new { year = next.Year, month = next.Month })!;
+}
+
+<div class="topbar">
+    <h1>Calendar — @first.ToString("yyyy MMMM")</h1>
+    @if (ViewData["EmployeeName"] is string emp)
+    {
+        <span class="who">@emp</span>
+    }
+</div>
+
+@if (isAdmin)
+{
+    <div class="panel">
+        <h3>Employee &amp; Month</h3>
+        <div class="body">
+            <form asp-action="Index" method="get" style="display:flex; gap:8px; flex-wrap:wrap; align-items:end;">
+                <div class="field" style="margin-bottom:0;">
+                    <label for="userId">Employee</label>
+                    <select id="userId" name="userId" class="form-control" style="min-width:220px;">
+                        @foreach (var e in Model.Employees)
+                        {
+                            <option value="@e.Id" selected="@(e.Id == Model.SelectedUserId)">@e.FullName (@e.Email)</option>
+                        }
+                    </select>
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                    <label for="month">Month</label>
+                    <input type="month" id="month" class="form-control" value="@first.ToString("yyyy-MM")"
+                           oninput="var p=this.value.split('-'); if(p.length===2){document.getElementById('year').value=p[0]; document.getElementById('monthNum').value=Number(p[1]);}" />
+                    <input type="hidden" id="year" name="year" value="@Model.Year" />
+                    <input type="hidden" id="monthNum" name="month" value="@Model.Month" />
+                </div>
+                <button type="submit" class="btn-elms btn-elms-auto">View</button>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="panel">
+    <div class="body legend" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <a href="@PrevUrl()" class="btn-elms btn-elms-auto" style="text-decoration:none;">← Prev</a>
+        <a href="@NextUrl()" class="btn-elms btn-elms-auto" style="text-decoration:none;">Next →</a>
+        <span style="flex:1;"></span>
+        @foreach (var (label, cls) in new[] { ("Present","present"), ("Absent","absent"), ("Leave","approved"), ("Pending","pending"), ("Rejected","rejected"), ("Holiday","holiday"), ("Weekend","weekend") })
+        {
+            <span class="badge @cls">@label</span>
+        }
+    </div>
+</div>
+
+<div class="panel">
+    <div class="cal-grid">
+        @{
+            var idx = 0;
+        }
+        @foreach (var d in Model.Days)
+        {
+            var modalId = $"dayModal{idx++}";
+            Model.AttendanceByDate.TryGetValue(d.Date, out var att);
+            var hasDetails = att is not null || d.Detail is not null;
+            <div class="cal-day @Css(d.Status) @(hasDetails ? "cal-clickable" : "")"
+                 @(hasDetails ? $"role=button tabindex=0 data-bs-toggle=modal data-bs-target=#{modalId} title=Click for details" : $"title={d.Date:yyyy-MM-dd} {Text(d)}")>
+                <div class="cal-date">@d.Date.Day <span class="cal-dow">@d.Date.ToString("ddd")</span></div>
+                <div class="cal-status">@Text(d)</div>
+                @if (d.WorkingHours.HasValue || !string.IsNullOrWhiteSpace(d.ProjectName))
+                {
+                    <div class="cal-detail">
+                        @if (d.WorkingHours.HasValue)
+                        {
+                            <span>@d.WorkingHours.Value.ToString("0.##") Hours</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(d.ProjectName))
+                        {
+                            <span>Project: @d.ProjectName</span>
+                        }
+                    </div>
+                }
+                else if (d.Detail is not null && d.Status is CalendarDayStatus.ApprovedLeave or CalendarDayStatus.PendingLeave)
+                {
+                    <div class="cal-detail"><span>@d.Detail</span></div>
+                }
+            </div>
+            @if (hasDetails)
+            {
+                <div class="modal fade" id="@modalId" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">@d.Date.ToString("yyyy-MM-dd dddd") — @Text(d)</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <table class="elms">
+                                    <tbody>
+                                        <tr><th>Status</th><td>@Text(d)</td></tr>
+                                        @if (att?.WorkingHours.HasValue == true)
+                                        {
+                                            <tr><th>Working Hours</th><td>@att.WorkingHours!.Value.ToString("0.##") Hours</td></tr>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(att?.ProjectName ?? d.ProjectName))
+                                        {
+                                            <tr><th>Project</th><td>@(att?.ProjectName ?? d.ProjectName)</td></tr>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(att?.Remarks ?? d.Detail))
+                                        {
+                                            <tr><th>Details</th><td>@(att?.Remarks ?? d.Detail)</td></tr>
+                                        }
+                                        @if (att?.CheckIn is not null)
+                                        {
+                                            <tr><th>Check In</th><td>@att.CheckIn.Value.ToString("HH:mm")</td></tr>
+                                        }
+                                        @if (att?.CheckOut is not null)
+                                        {
+                                            <tr><th>Check Out</th><td>@att.CheckOut.Value.ToString("HH:mm")</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-elms btn-elms-auto" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@if (Model.Summary.Count > 0)
+{
+    <div class="panel">
+        <h3>Summary</h3>
+        <div class="body" style="display:flex; gap:8px; flex-wrap:wrap;">
+            @foreach (var kv in Model.Summary.OrderBy(k => k.Key))
+            {
+                <span class="badge norecord">@kv.Key: @kv.Value</span>
+            }
+        </div>
+    </div>
+}

@@ -20,6 +20,10 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<ExceptionLog> ExceptionLogs => Set<ExceptionLog>();
 
+    public DbSet<Holiday> Holidays => Set<Holiday>();
+
+    public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -66,11 +70,18 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.Property(a => a.Action).HasMaxLength(50).IsRequired();
+            entity.Property(a => a.Details).HasMaxLength(500);
             entity.Property(a => a.ActionDate).HasDefaultValueSql("GETUTCDATE()");
 
             entity.HasOne(a => a.LeaveRequest)
                 .WithMany()
                 .HasForeignKey(a => a.LeaveRequestId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Phase 10 — attendance/timesheet corrections are audited too.
+            entity.HasOne(a => a.AttendanceRecord)
+                .WithMany()
+                .HasForeignKey(a => a.AttendanceRecordId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(a => a.ActionBy)
@@ -93,6 +104,41 @@ public class ApplicationDbContext : DbContext
 
             entity.HasIndex(e => e.Timestamp)
                 .HasDatabaseName("IX_ExceptionLogs_Timestamp");
+        });
+
+        // Attendance + Holiday Calendar — SQL Server Express only, no SQLite.
+        modelBuilder.Entity<Holiday>(entity =>
+        {
+            entity.Property(h => h.Name).HasMaxLength(200).IsRequired();
+            entity.Property(h => h.Date).HasColumnType("date").IsRequired();
+            entity.Property(h => h.Description).HasMaxLength(500);
+            entity.Property(h => h.CreatedDate).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasIndex(h => h.Date)
+                .IsUnique()
+                .HasDatabaseName("IX_Holidays_Date");
+        });
+
+        modelBuilder.Entity<AttendanceRecord>(entity =>
+        {
+            entity.Property(a => a.Date).HasColumnType("date").IsRequired();
+            entity.Property(a => a.Remarks).HasMaxLength(500);
+            // Phase 9 — daily submission details (SQL Server decimal(4,2), e.g. 9.00).
+            entity.Property(a => a.WorkingHours).HasColumnType("decimal(4,2)");
+            entity.Property(a => a.ProjectName).HasMaxLength(200);
+            entity.Property(a => a.CreatedDate).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasOne(a => a.User)
+                .WithMany()
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(a => new { a.UserId, a.Date })
+                .IsUnique()
+                .HasDatabaseName("IX_AttendanceRecords_UserId_Date");
+
+            entity.HasIndex(a => a.Date)
+                .HasDatabaseName("IX_AttendanceRecords_Date");
         });
 
         // Seed accounts per DATABASE.md §4 / PROJECT.md §5.

@@ -22,6 +22,60 @@ namespace LeaveManagementSystem.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("LeaveManagementSystem.Models.Entities.AttendanceRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CheckIn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CheckOut")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ProjectName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("WorkingHours")
+                        .HasColumnType("decimal(4,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date")
+                        .HasDatabaseName("IX_AttendanceRecords_Date");
+
+                    b.HasIndex("UserId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("IX_AttendanceRecords_UserId_Date");
+
+                    b.ToTable("AttendanceRecords");
+                });
+
             modelBuilder.Entity("LeaveManagementSystem.Models.Entities.AuditLog", b =>
                 {
                     b.Property<int>("Id")
@@ -43,12 +97,21 @@ namespace LeaveManagementSystem.Data.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETUTCDATE()");
 
-                    b.Property<int>("LeaveRequestId")
+                    b.Property<int?>("AttendanceRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("LeaveRequestId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ActionByUserId");
+
+                    b.HasIndex("AttendanceRecordId");
 
                     b.HasIndex("LeaveRequestId");
 
@@ -109,6 +172,40 @@ namespace LeaveManagementSystem.Data.Migrations
                         .HasDatabaseName("IX_ExceptionLogs_Timestamp");
 
                     b.ToTable("ExceptionLogs");
+                });
+
+            modelBuilder.Entity("LeaveManagementSystem.Models.Entities.Holiday", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Holidays_Date");
+
+                    b.ToTable("Holidays");
                 });
 
             modelBuilder.Entity("LeaveManagementSystem.Models.Entities.LeaveRequest", b =>
@@ -220,7 +317,7 @@ namespace LeaveManagementSystem.Data.Migrations
                             FullName = "System Admin",
                             IsActive = true,
                             LeaveBalance = 0,
-                            PasswordHash = "AQAAAAIAAYagAAAAENC/V0bm+lahcrMgFb0pAFchR0lJZk/uu+UpVbqo/CWJAizP+MX8nvRM9pmmcyWZbw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEM/O5hZXi/t5RVQTyBF6bOENVVj3wJ8xKztKFAFIyzrWkPezxt9KgIdl8UuDhXb2wA==",
                             Role = 1
                         },
                         new
@@ -231,9 +328,20 @@ namespace LeaveManagementSystem.Data.Migrations
                             FullName = "Demo Employee",
                             IsActive = true,
                             LeaveBalance = 20,
-                            PasswordHash = "AQAAAAIAAYagAAAAEE6VyDk9ii7+7hcJ5wcrJ8lkKHqrlOxiY2bRSgOaklLKO33torH7Bthsa6ARfvLCYQ==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEOQCxCQkySUSCCTNTls26a1P4JjwJPcBzGW4I5oc9yNnwFIIoSRW796CfMHSuqFr3g==",
                             Role = 2
                         });
+                });
+
+            modelBuilder.Entity("LeaveManagementSystem.Models.Entities.AttendanceRecord", b =>
+                {
+                    b.HasOne("LeaveManagementSystem.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("LeaveManagementSystem.Models.Entities.AuditLog", b =>
@@ -244,13 +352,19 @@ namespace LeaveManagementSystem.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("LeaveManagementSystem.Models.Entities.AttendanceRecord", "AttendanceRecord")
+                        .WithMany()
+                        .HasForeignKey("AttendanceRecordId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("LeaveManagementSystem.Models.Entities.LeaveRequest", "LeaveRequest")
                         .WithMany()
                         .HasForeignKey("LeaveRequestId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ActionBy");
+
+                    b.Navigation("AttendanceRecord");
 
                     b.Navigation("LeaveRequest");
                 });

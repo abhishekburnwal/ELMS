@@ -23,4 +23,19 @@ public class AuditService : IAuditService
             ActionDate = DateTime.UtcNow
         });
     }
+
+    public async Task RecordAttendanceChangeAsync(
+        int? attendanceRecordId, int actionByUserId, string action, string? details)
+    {
+        await _leaves.AddAuditAsync(new AuditLog
+        {
+            AttendanceRecordId = attendanceRecordId,
+            ActionByUserId = actionByUserId,
+            Action = action,
+            Details = string.IsNullOrWhiteSpace(details)
+                ? null
+                : details.Trim().Length > 500 ? details.Trim()[..500] : details.Trim(),
+            ActionDate = DateTime.UtcNow
+        });
+    }
 }

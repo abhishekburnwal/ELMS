@@ -31,8 +31,18 @@ builder.Services.AddSignalR();
 // Service + repository wiring (ARCHITECTURE.md §8) — all Scoped.
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ILeaveRepository, LeaveRepository>();
-builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IHolidayRepository, HolidayRepository>();
+builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>(sp =>
+    new EmployeeService(
+        sp.GetRequiredService<IUserRepository>(),
+        sp.GetRequiredService<ILeaveRepository>(),
+        sp.GetRequiredService<IHolidayRepository>()));
 builder.Services.AddScoped<ILeaveService, LeaveService>();
+builder.Services.AddScoped<IHolidayService, HolidayService>();
+builder.Services.AddScoped<IWorkingCalendarService, WorkingCalendarService>();
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<IEmployeeCalendarService, EmployeeCalendarService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IExceptionLogStore, ExceptionLogStore>();
 

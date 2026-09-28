@@ -15,12 +15,16 @@ public class AdminController : Controller
     private readonly IEmployeeService _employees;
     private readonly ILeaveRepository _leaves;
     private readonly ILeaveService _leaveService;
+    private readonly IWorkingCalendarService _calendar;
 
-    public AdminController(IEmployeeService employees, ILeaveRepository leaves, ILeaveService leaveService)
+    public AdminController(
+        IEmployeeService employees, ILeaveRepository leaves,
+        ILeaveService leaveService, IWorkingCalendarService calendar)
     {
         _employees = employees;
         _leaves = leaves;
         _leaveService = leaveService;
+        _calendar = calendar;
     }
 
     // ELMS-12 — counts computed on read from the underlying data.
@@ -39,14 +43,24 @@ public class AdminController : Controller
     }
 
     // ELMS-06 — list + name/email search, with used/remaining per DATABASE.md §6.
+    // Working-day count goes through the shared WorkingCalendarService so
+    // configured holidays are excluded (same rule as leave + attendance).
     [HttpGet]
     public async Task<IActionResult> Employees(string? search)
     {
         var users = await _employees.GetEmployeesAsync(search);
         var approved = await _leaves.GetApprovedForUsersAsync(users.Select(u => u.Id));
-        var usedByUser = approved
-            .GroupBy(l => l.UserId)
-            .ToDictionary(g => g.Key, g => g.Sum(l => LeaveDaysCalculator.CountWorkingDays(l.FromDate, l.ToDate)));
+        var usedByUser = new Dictionary<int, int>();
+        foreach (var g in approved.GroupBy(l => l.UserId))
+        {
+            var total = 0;
+            foreach (var l in g)
+            {
+                total += await _calendar.CountWorkingDaysAsync(l.FromDate, l.ToDate);
+            }
+
+            usedByUser[g.Key] = total;
+        }
 
         var model = users.Select(u => new EmployeeListItemViewModel
         {
@@ -156,7 +170,12 @@ public class AdminController : Controller
         ViewData["From"] = from?.ToString("yyyy-MM-dd");
         ViewData["To"] = to?.ToString("yyyy-MM-dd");
         ViewData["Search"] = search;
-        return View(await _leaveService.GetFilteredAsync(filter, from, to, search));
+        var requests = await _leaveService.GetFilteredAsync(filter, from, to, search);
+        ViewBag.Holidays = requests.Count > 0
+            ? await _calendar.GetHolidaysInRangeAsync(
+                requests.Min(l => l.FromDate.Date), requests.Max(l => l.ToDate.Date))
+            : new HashSet<DateTime>();
+        return View(requests);
     }
 
     // ELMS-18 — export the current filter to Excel, streamed in the response.
@@ -193,7 +212,7 @@ public class AdminController : Controller
             sheet.Cell(row, 3).Style.DateFormat.Format = "yyyy-MM-dd";
             sheet.Cell(row, 4).Value = r.ToDate;
             sheet.Cell(row, 4).Style.DateFormat.Format = "yyyy-MM-dd";
-            sheet.Cell(row, 5).Value = LeaveDaysCalculator.CountWorkingDays(r.FromDate, r.ToDate);
+            sheet.Cell(row, 5).Value = await _calendar.CountWorkingDaysAsync(r.FromDate, r.ToDate);
             sheet.Cell(row, 6).Value = r.Reason;
             sheet.Cell(row, 7).Value = r.Status.ToString();
             sheet.Cell(row, 8).Value = r.AppliedDate;

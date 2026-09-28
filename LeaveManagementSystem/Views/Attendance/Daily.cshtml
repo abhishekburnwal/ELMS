@@ -1,0 +1,64 @@
+@model LeaveManagementSystem.ViewModels.AdminDailyAttendanceViewModel
+@{
+    ViewData["Title"] = "Daily Attendance";
+}
+
+<div class="topbar">
+    <h1>Daily Attendance — @Model.Date.ToString("yyyy-MM-dd dddd")</h1>
+</div>
+
+@if (TempData["Message"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<div class="panel">
+    <div class="body">
+        <form asp-action="Daily" method="get" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="form-control" style="width:180px;" />
+            <button type="submit" class="btn-elms btn-elms-auto">Go</button>
+            <span style="flex:1;"></span>
+            <a asp-action="Monthly" class="btn-elms btn-elms-auto" style="text-decoration:none;">Monthly</a>
+            <a asp-action="EmployeeWise" class="btn-elms btn-elms-auto" style="text-decoration:none;">Employee-wise</a>
+            <a asp-action="Report" class="btn-elms btn-elms-auto" style="text-decoration:none;">Report</a>
+            <a asp-action="Mark" class="btn-elms btn-elms-auto" style="text-decoration:none;">Manual Entry</a>
+        </form>
+    </div>
+</div>
+
+<div class="panel">
+    <h3>Records (@Model.Records.Count)</h3>
+    <table class="elms">
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Status</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Remarks</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Records.Count == 0)
+        {
+            <tr><td colspan="6" style="color:var(--ink-soft);">No attendance records for this date.</td></tr>
+        }
+        @foreach (var r in Model.Records)
+        {
+            <tr>
+                <td>@(r.User?.FullName ?? $"User #{r.UserId}")</td>
+                <td><span class="badge @r.Status.ToString().ToLower()">@r.Status</span></td>
+                <td>@(r.CheckIn?.ToString("HH:mm") ?? "—")</td>
+                <td>@(r.CheckOut?.ToString("HH:mm") ?? "—")</td>
+                <td>@(r.Remarks ?? "—")</td>
+                <td><a asp-action="Correct" asp-route-id="@r.Id">Correct</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

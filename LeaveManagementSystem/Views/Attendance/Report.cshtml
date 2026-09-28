@@ -1,0 +1,89 @@
+@model LeaveManagementSystem.ViewModels.AdminAttendanceReportViewModel
+@{
+    ViewData["Title"] = "Centralized Attendance Report";
+    var first = new DateTime(Model.Year, Model.Month, 1);
+}
+
+<div class="topbar">
+    <h1>Attendance Report — @first.ToString("yyyy MMMM")</h1>
+    <span class="who">All employees · hours &amp; projects</span>
+</div>
+
+<div class="panel">
+    <div class="body">
+        <form asp-action="Report" method="get" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input type="month" value="@first.ToString("yyyy-MM")" class="form-control" style="width:170px;"
+                   oninput="var p=this.value.split('-'); if(p.length===2){this.form.year.value=p[0]; this.form.month.value=Number(p[1]);}" />
+            <input type="hidden" name="year" value="@Model.Year" />
+            <input type="hidden" name="month" value="@Model.Month" />
+            <input type="text" name="search" value="@Model.Search" placeholder="Search name/email" class="form-control" style="max-width:240px;" />
+            <button type="submit" class="btn-elms btn-elms-auto">Filter</button>
+            <span style="flex:1;"></span>
+            <a asp-action="Daily" class="btn-elms btn-elms-auto" style="text-decoration:none;">Daily</a>
+            <a asp-action="Monthly" class="btn-elms btn-elms-auto" style="text-decoration:none;">Monthly</a>
+            <a asp-action="EmployeeWise" asp-route-year="@Model.Year" asp-route-month="@Model.Month" class="btn-elms btn-elms-auto" style="text-decoration:none;">Employee-wise</a>
+        </form>
+    </div>
+</div>
+
+<div class="panel">
+    <h3>Totals per employee</h3>
+    <table class="elms">
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Days Present</th>
+                <th>Total Hours</th>
+                <th>Projects</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Totals.Count == 0)
+        {
+            <tr><td colspan="4" style="color:var(--ink-soft);">No employees found.</td></tr>
+        }
+        @foreach (var t in Model.Totals)
+        {
+            <tr>
+                <td>@t.EmployeeName<br /><small style="color:var(--ink-soft);">@t.Email</small></td>
+                <td>@t.DaysPresent</td>
+                <td>@(t.TotalHours > 0 ? t.TotalHours.ToString("0.##") : "—")</td>
+                <td>@(t.Projects.Count > 0 ? string.Join(", ", t.Projects) : "—")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="panel">
+    <h3>Daily records (@Model.Records.Count)</h3>
+    <table class="elms">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Employee</th>
+                <th>Status</th>
+                <th>Hours</th>
+                <th>Project</th>
+                <th>Remarks</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Records.Count == 0)
+        {
+            <tr><td colspan="6" style="color:var(--ink-soft);">No attendance records this month.</td></tr>
+        }
+        @foreach (var r in Model.Records)
+        {
+            <tr>
+                <td>@r.Date.ToString("yyyy-MM-dd ddd")</td>
+                <td>@(r.User?.FullName ?? $"User #{r.UserId}")</td>
+                <td><span class="badge @r.Status.ToString().ToLower()">@r.Status</span></td>
+                <td>@(r.WorkingHours.HasValue ? r.WorkingHours.Value.ToString("0.##") : "—")</td>
+                <td>@(r.ProjectName ?? "—")</td>
+                <td>@(r.Remarks ?? "—")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

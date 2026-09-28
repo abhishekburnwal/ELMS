@@ -48,7 +48,7 @@
         }
         @foreach (var r in Model.RecentRequests)
         {
-            var days = LeaveDaysCalculator.CountWorkingDays(r.FromDate, r.ToDate);
+            var days = ViewBag.Holidays is System.Collections.Generic.HashSet<System.DateTime> hs ? LeaveDaysCalculator.CountWorkingDays(r.FromDate, r.ToDate, hs) : LeaveDaysCalculator.CountWorkingDays(r.FromDate, r.ToDate);
             var status = r.Status.ToString().ToLower();
             <tr>
                 <td>@r.FromDate.ToString("yyyy-MM-dd")</td>
